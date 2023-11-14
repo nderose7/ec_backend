@@ -1,0 +1,82 @@
+{
+  "kind": "collectionType",
+  "collectionName": "recipes",
+  "info": {
+    "singularName": "recipe",
+    "pluralName": "recipes",
+    "displayName": "Recipe",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "paragraph_description": {
+      "type": "text",
+      "maxLength": 1000
+    },
+    "prep_time": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "cook_time": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "total_time": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "servings": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "calories": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "ingredients": {
+      "type": "text",
+      "maxLength": 2000
+    },
+    "cooking_instructions": {
+      "type": "text",
+      "maxLength": 2000
+    },
+    "cooking_notes": {
+      "type": "text",
+      "maxLength": 2000
+    },
+    "recipe_name": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "uid": {
+      "type": "uid"
+    },
+    "course": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "cuisine": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "userdata": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::userdata.userdata",
+      "inversedBy": "recipes"
+    },
+    "beer_pairing": {
+      "type": "string"
+    },
+    "wine_pairing": {
+      "type": "string"
+    },
+    "cocktail_pairing": {
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "kind": "collectionType",
+  "collectionName": "userdatas",
+  "info": {
+    "singularName": "userdata",
+    "pluralName": "userdatas",
+    "displayName": "User Data",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "recipes": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::recipe.recipe",
+      "mappedBy": "userdata"
+    },
+    "owner": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "userdata"
+    },
+    "name": {
+      "type": "string"
+    },
+    "avatar": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "freeCreditsLeft": {
+      "type": "integer",
+      "default": 50,
+      "max": 50
+    }
+  }
+}
