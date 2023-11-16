@@ -40,7 +40,7 @@
     },
     "freeCreditsLeft": {
       "type": "integer",
-      "default": 50,
+      "default": 25,
       "max": 50
     }
   }

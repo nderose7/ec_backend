@@ -1,0 +1,30 @@
+{
+  "kind": "collectionType",
+  "collectionName": "userfavorites",
+  "info": {
+    "singularName": "userfavorite",
+    "pluralName": "userfavorites",
+    "displayName": "User Favorites"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "favoritedAt": {
+      "type": "datetime"
+    },
+    "recipe": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::recipe.recipe",
+      "inversedBy": "userFavorites"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "userFavorites"
+    }
+  }
+}

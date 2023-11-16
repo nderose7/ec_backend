@@ -77,6 +77,40 @@
     },
     "cocktail_pairing": {
       "type": "string"
+    },
+    "image_url": {
+      "type": "text"
+    },
+    "image": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "diet_type_if_set": {
+      "type": "string"
+    },
+    "created_by_user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "userrecipe": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::userrecipe.userrecipe",
+      "mappedBy": "recipe"
+    },
+    "userFavorites": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::userfavorite.userfavorite",
+      "mappedBy": "recipe"
     }
   }
 }

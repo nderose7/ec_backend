@@ -1,0 +1,31 @@
+{
+  "kind": "collectionType",
+  "collectionName": "userrecipes",
+  "info": {
+    "singularName": "userrecipe",
+    "pluralName": "userrecipes",
+    "displayName": "User Recipe",
+    "description": ""
+  },
+  "options": {
+    "increments": true,
+    "timestamps": true
+  },
+  "attributes": {
+    "addedAt": {
+      "type": "datetime"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "userrecipe"
+    },
+    "recipe": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::recipe.recipe",
+      "inversedBy": "userrecipe"
+    }
+  }
+}

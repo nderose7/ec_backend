@@ -74,6 +74,18 @@
       "relation": "oneToOne",
       "target": "api::userdata.userdata",
       "inversedBy": "owner"
+    },
+    "userrecipe": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::userrecipe.userrecipe",
+      "mappedBy": "user"
+    },
+    "userFavorites": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::userfavorite.userfavorite",
+      "mappedBy": "user"
     }
   }
 }
