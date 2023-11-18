@@ -61,6 +61,10 @@ module.exports = {
         amount: price, // should be in the smallest currency unit, e.g., cents
         currency: currency,
         customer: stripeCustomerId,
+          metadata: {
+            priceId: stripeProductId, // Replace with your actual product ID
+            strapiUserId: userId,
+        },
       });
 
       // Send the client secret to the frontend
@@ -132,6 +136,8 @@ module.exports = {
 
         // Access the Stripe customer ID from the payment intent
         const stripeCustomerId = paymentIntent.customer;
+        const stripePriceId = paymentIntent.metadata.priceId;
+        console.log("Stripe Price Id: ", stripePriceId)
         console.log('Stripe Customer ID:', stripeCustomerId);
         try {
           
@@ -181,7 +187,9 @@ module.exports = {
           console.log('Trying to update userdata paid membership field...');
           const updateUserData = await strapi.entityService.update('plugin::users-permissions.user', userId,  {
             data: {
-              paidMembershipTierOne: true,
+              paidMembershipTierOne: stripePriceId === process.env.MEMBERSHIP_BASIC ? true : false,
+              paidMembershipTierTwo: stripePriceId === process.env.MEMBERSHIP_PRO ? true : false,
+              paidMembershipTierThree: stripePriceId === process.env.MEMBERSHIP_PREMIUM ? true : false,
               //fullName: customerName,
               freeAccount: false,
             }
