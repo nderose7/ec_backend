@@ -8,6 +8,7 @@ from typing import List
 from fastapi.responses import StreamingResponse
 import json
 import asyncio
+from fastapi.responses import JSONResponse
 
 
 client = OpenAI()
@@ -31,6 +32,7 @@ class Ingredients(BaseModel):
 
 # Extend the Ingredients model to include the new filters
 class RecipeRequest(BaseModel):
+    title: str = "Any"
     ingredients: str = "Any"
     course: str = "Any"  # Default value if not specified
     cuisine: str = "Any"  # Default value if not specified
@@ -49,16 +51,16 @@ def format_keys(recipe):
 @app.post("/get-recipes/", response_class=StreamingResponse)
 async def get_recipes(request: RecipeRequest):
     # Construct the prompt from the request with an example format
-    prompt_text = f"I have the following ingredients or dish name: {request.ingredients}."
+    prompt_text = f"I have the following dish/recipe name: {request.title} and the following ingredients: {request.ingredients}."
     prompt_text += f" Give me one "
     prompt_text += f"{request.course.lower()} recipe" if request.course != "Any" else "recipe idea"
     prompt_text += f" from {request.cuisine} cuisine" if request.cuisine != "Any" else ""
     prompt_text += f" that is"
     prompt_text += f" of difficulty type {request.difficulty.lower()}" if request.difficulty != "Any" else " for any difficulty level"
     prompt_text += f" and suitable for a {request.diet} diet." if request.diet != "Any" else "."
-    prompt_text += f" Recipe should have creative original names/titles unless they are classic recipes. Recipe should be 'insanely good' tasting, and on an imagination/uniqueness scale of 1-5, it should be a {request.uniqueness}. For beer/wine/cocktails, suggest options from the region the recipe is from if one exists. If ingredients or dish name is 'Surprise me', generate a random recipe from a random cuisine and avoid making everything spicy."
+    prompt_text += f" Recipe should have creative original names/titles unless they are classic recipes. Recipe should be 'insanely good' tasting, and on an imagination/uniqueness scale of 1-5, it should be a {request.uniqueness}. For beer/wine/cocktails, suggest options from the region the recipe is from if one exists. If ingredients or dish name is 'Surprise me': generate a random recipe from a random cuisine from a random nation."
     prompt_text += " Please format the recipe as follows:\n"
-    prompt_text += " Recipe Name: [name]\n Prep Time: [time]\n Cook Time: [time]\n Total Time: [time]\n Servings: [number]\n Course: [course type]\n Cuisine Type: [cuisine type]\n Calories: [amount]\n Diet Type If Set: [text]\n Paragraph Description: [text]\n Ingredients: [list]\n Cooking Instructions: [steps]\n Cooking Notes: [list]\n Beer Pairing: [text]\n Wine Pairing: [text]\n Cocktail Pairing: [text]\n Recipe End: [end]\n"
+    prompt_text += f" Recipe Name: {request.title}\n Prep Time: [time]\n Cook Time: [time]\n Total Time: [time]\n Servings: [number]\n Course: [course type]\n Cuisine Type: [cuisine type]\n Calories: [amount]\n Diet Type If Set: [text]\n Paragraph Description: [text]\n Ingredients: [list]\n Cooking Instructions: [steps]\n Cooking Notes: [list]\n Beer Pairing: [text]\n Wine Pairing: [text]\n Cocktail Pairing: [text]\n Recipe End: [end]\n"
 
     # Debugging - print out the constructed prompt to check its correctness before sending to API
     print("Sending the following prompt to the API:", prompt_text)
@@ -183,6 +185,57 @@ async def get_recipes(request: RecipeRequest):
             return None
     
     return StreamingResponse(generate(), media_type="application/x-ndjson")
+
+
+@app.post("/get-recipe-title/", response_class=JSONResponse)
+async def get_recipe_title(request: RecipeRequest):
+    # Construct the prompt from the request with an example format
+    prompt_text = f"I have the following ingredients or dish name: {request.ingredients}."
+    prompt_text += f" Give me one "
+    prompt_text += f"{request.course.lower()} recipe" if request.course != "Any" else "recipe idea"
+    prompt_text += f" from {request.cuisine} cuisine" if request.cuisine != "Any" else ""
+    prompt_text += f" that is"
+    prompt_text += f" of difficulty type {request.difficulty.lower()}" if request.difficulty != "Any" else " for any difficulty level"
+    prompt_text += f" and suitable for a {request.diet} diet." if request.diet != "Any" else "."
+    prompt_text += f" Recipe should have creative original names/titles unless they are classic recipes. Recipe should be 'insanely good' tasting, and on an imagination/uniqueness scale of 1-5, it should be a {request.uniqueness}. If ingredients or dish name is 'Surprise me': generate a random recipe from a random cuisine from a random nation."
+    prompt_text += " For now, just give me the recipe name. Please format the recipe as follows:\n"
+    prompt_text += " Recipe Name: [name]\n Recipe End: [end]\n"
+
+    # Debugging - print out the constructed prompt to check its correctness before sending to API
+    print("Sending the following prompt to the API:", prompt_text)
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo-1106",
+            messages=[
+                {"role": "system", "content": "You are a master of culinary arts."},
+                {"role": "user", "content": prompt_text}
+            ],
+            temperature=1.2
+        )
+        print("Response:", response)
+
+        # Extract the recipe title
+        if response.choices and len(response.choices) > 0:
+            content = response.choices[0].message.content
+            # Parsing the content to extract the recipe name
+            if "Recipe Name:" in content and "\n" in content:
+                start = content.find("Recipe Name:") + len("Recipe Name:")
+                end = content.find("\n", start)
+                recipe_name = content[start:end].strip()
+                print(f"recipe_name: ", recipe_name)
+                return {"recipe_name": recipe_name}
+            else:
+                print("Recipe name not found in response")
+                return {"error": "Recipe name not found"}
+        else:
+            print("Invalid response structure")
+            return {"error": "Invalid response structure"}
+
+    except Exception as e:
+        print("Get recipe title from API exception: ", str(e))
+        return {"error": str(e)}
+
     
 
 if __name__ == "__main__":
