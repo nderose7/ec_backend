@@ -5,7 +5,8 @@ services:
     build: .
     image: strapi:latest
     restart: unless-stopped
-    env_file: .env
+    env_file: 
+      - ./.env
     environment:
       DATABASE_CLIENT: ${DATABASE_CLIENT}
       DATABASE_HOST: ec-backendDB
@@ -16,7 +17,6 @@ services:
       ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
       NODE_ENV: ${NODE_ENV}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
     volumes:
       - ./config:/opt/app/config
       - ./src:/opt/app/src

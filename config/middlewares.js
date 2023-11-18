@@ -1,4 +1,5 @@
 module.exports = [
+  'global::bodyparser',
   'strapi::errors',
   'strapi::security',
   'strapi::cors',

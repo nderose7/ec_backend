@@ -2,7 +2,7 @@ const OpenAI = require("openai");
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
-const client = new OpenAI({ apiKey: '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' })
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 const downloadImage = require('../utils/imageDownloader'); // Ensure this path is correct
 
 

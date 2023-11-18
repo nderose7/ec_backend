@@ -86,6 +86,25 @@
       "relation": "oneToMany",
       "target": "api::userfavorite.userfavorite",
       "mappedBy": "user"
+    },
+    "stripeCustomerId": {
+      "type": "string"
+    },
+    "freeAccount": {
+      "type": "boolean",
+      "default": true
+    },
+    "paidMembershipTierOne": {
+      "type": "boolean",
+      "default": false
+    },
+    "paidMembershipTierTwo": {
+      "type": "boolean",
+      "default": false
+    },
+    "paidMembershipTierThree": {
+      "type": "boolean",
+      "default": false
     }
   }
 }

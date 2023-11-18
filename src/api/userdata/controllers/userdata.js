@@ -11,8 +11,8 @@ module.exports = createCoreController('api::userdata.userdata',
   strapi
 }) => ({
   async find(ctx) {
-    console.log("Attempting find userdata for user ", ctx.state.user)
-    console.log("ctx.query: ", ctx.query)
+    //console.log("Attempting find userdata for user ", ctx.state.user)
+    //console.log("ctx.query: ", ctx.query)
     const {
       filters
     } = ctx.query

@@ -1554,6 +1554,14 @@
   "resolved" "https://registry.npmjs.org/@strapi/provider-audit-logs-local/-/provider-audit-logs-local-4.14.5.tgz"
   "version" "4.14.5"
 
+"@strapi/provider-email-nodemailer@^4.15.4":
+  "integrity" "sha512-EgLFsCr5flj/N31Rs3QW4Ei70voh1kSmyJ+qHVFflP+uZaSNEd4uNJMcF+Pp+CNnCjo8B5PY/Kn3jqy5vT2kWw=="
+  "resolved" "https://registry.npmjs.org/@strapi/provider-email-nodemailer/-/provider-email-nodemailer-4.15.4.tgz"
+  "version" "4.15.4"
+  dependencies:
+    "lodash" "4.17.21"
+    "nodemailer" "6.9.1"
+
 "@strapi/provider-email-sendmail@4.14.5":
   "integrity" "sha512-VJa2Wt+TI/GQ+MfF9MpxK266JkLzgwIc3ERJ9C0J0Q9tdABVSinug2JJWIQ8eUh+vA5VfCGxR+KKQqMRAmEHKQ=="
   "resolved" "https://registry.npmjs.org/@strapi/provider-email-sendmail/-/provider-email-sendmail-4.14.5.tgz"
@@ -1966,7 +1974,7 @@
   dependencies:
     "@types/node" "*"
 
-"@types/node@*", "@types/node@>= 12", "@types/node@>= 14":
+"@types/node@*", "@types/node@>= 12", "@types/node@>= 14", "@types/node@>=8.1.0":
   "integrity" "sha512-nekiGu2NDb1BcVofVcEKMIwzlx4NjHlcjhoxxKBNLtz15Y1z7MYf549DFvkHSId02Ax6kGwWntIBPC3l/JZcmw=="
   "resolved" "https://registry.npmjs.org/@types/node/-/node-20.9.0.tgz"
   "version" "20.9.0"
@@ -3904,6 +3912,11 @@
   "version" "5.3.0"
   dependencies:
     "is-obj" "^2.0.0"
+
+"dotenv@^16.3.1":
+  "integrity" "sha512-IPzF4w4/Rd94bA9imS68tZBaYyBWSCE47V1RGuMrB94iyTOIEwRmVL2x/4An+6mETpLrKJ5hQkB8W4kFAadeIQ=="
+  "resolved" "https://registry.npmjs.org/dotenv/-/dotenv-16.3.1.tgz"
+  "version" "16.3.1"
 
 "dotenv@14.2.0":
   "integrity" "sha512-05POuPJyPpO6jqzTNweQFfAyMSD4qa4lvsMOWyTRTdpHKy6nnnN+IYWaXF+lHivhBH/ufDKlR4IWCAN3oPnHuw=="
@@ -6804,6 +6817,11 @@
   dependencies:
     "nodemailer-fetch" "1.6.0"
 
+"nodemailer@6.9.1":
+  "integrity" "sha512-qHw7dOiU5UKNnQpXktdgQ1d3OFgRAekuvbJLcdG5dnEo/GtcTHRYM7+UfJARdOFU9WUQO8OiIamgWPmiSFHYAA=="
+  "resolved" "https://registry.npmjs.org/nodemailer/-/nodemailer-6.9.1.tgz"
+  "version" "6.9.1"
+
 "noms@0.0.0":
   "integrity" "sha512-lNDU9VJaOPxUmXcLb+HQFeUgQQPtMI24Gt6hgfuMHRJgMRHMF/qZ4HJD3GDru4sSw9IQl2jPjAYnQrdIeLbwow=="
   "resolved" "https://registry.npmjs.org/noms/-/noms-0.0.0.tgz"
@@ -7654,6 +7672,13 @@
   dependencies:
     "side-channel" "^1.0.4"
 
+"qs@^6.11.0", "qs@6.11.1":
+  "integrity" "sha512-0wsrzgTz/kAVIeuxSjnpGC56rzYtr6JT/2BwEvMaPhFIoYa1aGO8LbzuU1R0uUYQkLpWBTOj0l/CLAJB64J6nQ=="
+  "resolved" "https://registry.npmjs.org/qs/-/qs-6.11.1.tgz"
+  "version" "6.11.1"
+  dependencies:
+    "side-channel" "^1.0.4"
+
 "qs@^6.11.2":
   "integrity" "sha512-tDNIz22aBzCDxLtVH++VnTfzxlfeK5CbqohpSqpJgj1Wg/cQbStNAz3NuqCs5vV+pjBsK4x4pN9HlVh7rcYRiA=="
   "resolved" "https://registry.npmjs.org/qs/-/qs-6.11.2.tgz"
@@ -7679,13 +7704,6 @@
   "integrity" "sha512-MvjoMCJwEarSbUYk5O+nmoSzSutSsTwF85zcHPQ9OrlFoZOYIjaqBAJIqIXjptyD5vThxGq52Xu/MaJzRkIk4Q=="
   "resolved" "https://registry.npmjs.org/qs/-/qs-6.11.0.tgz"
   "version" "6.11.0"
-  dependencies:
-    "side-channel" "^1.0.4"
-
-"qs@6.11.1":
-  "integrity" "sha512-0wsrzgTz/kAVIeuxSjnpGC56rzYtr6JT/2BwEvMaPhFIoYa1aGO8LbzuU1R0uUYQkLpWBTOj0l/CLAJB64J6nQ=="
-  "resolved" "https://registry.npmjs.org/qs/-/qs-6.11.1.tgz"
-  "version" "6.11.1"
   dependencies:
     "side-channel" "^1.0.4"
 
@@ -8947,6 +8965,14 @@
   "integrity" "sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ=="
   "resolved" "https://registry.npmjs.org/strip-json-comments/-/strip-json-comments-2.0.1.tgz"
   "version" "2.0.1"
+
+"stripe@^14.5.0":
+  "integrity" "sha512-MTt0P0VYDAj2VZyZMW41AxcXVs9s06EDFIHYat4UUkluJgnBHo4T4E2byPhnxoJCPvdzWBwBLnhWbSOg//VTpA=="
+  "resolved" "https://registry.npmjs.org/stripe/-/stripe-14.5.0.tgz"
+  "version" "14.5.0"
+  dependencies:
+    "@types/node" ">=8.1.0"
+    "qs" "^6.11.0"
 
 "style-loader@3.3.1":
   "integrity" "sha512-GPcQ+LDJbrcxHORTRes6Jy2sfvK2kS6hpSfI/fXhPt+spVzxF6LJ1dHLN9zIGmVaaP044YKaIatFaufENRiDoQ=="
