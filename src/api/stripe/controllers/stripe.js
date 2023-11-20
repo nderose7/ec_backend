@@ -6,7 +6,7 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-function getStripeProductId(membershipType) {
+function getStripePriceId(membershipType) {
   // Define your mapping logic here
   const mapping = {
     'basic': process.env.MEMBERSHIP_BASIC,
@@ -19,11 +19,12 @@ function getStripeProductId(membershipType) {
 
 async function getPriceDetails(stripePriceId) {
   try {
+    console.log("Getting price details")
     // Fetch the price object from Stripe
     const price = await stripe.prices.retrieve(stripePriceId);
-
+    console.log("Price details: ", price)
     return {
-      price: price.unit_amount, // Price in the smallest currency unit (e.g., cents for USD)
+      amount: price.unit_amount, // Price in the smallest currency unit (e.g., cents for USD)
       currency: price.currency, // Currency of the price
     };
   } catch (error) {
@@ -33,77 +34,142 @@ async function getPriceDetails(stripePriceId) {
 }
 
 module.exports = {
-  test: async (ctx) => {
-    ctx.send('Test route working');
-  },
-  membershipType: async (ctx) => {
+  createSetupIntent: async (ctx) => {
     try {
-      const { membershipType, userId } = ctx.request.body;
+      console.log("Creating SetupIntent...");
+      const { userId } = ctx.request.body;
 
-      // Retrieve the Stripe Customer ID for the user
-      //const user = await strapi.plugins['users-permissions'].services.user.fetch({ id: userId });
-      const user = await strapi.entityService.findOne('plugin::users-permissions.user', userId, { 
-      });
-      console.log("user: ", user)
-      //console.log("user: ", user.stripCustomerId)
+      // Optionally, you can associate the SetupIntent with an existing Stripe customer
+      const user = await strapi.entityService.findOne('plugin::users-permissions.user', userId, {});
       const stripeCustomerId = user.stripeCustomerId;
 
-      // Map the membership type to the Stripe product ID and retrieve price details
-      const stripeProductId = getStripeProductId(membershipType);
-      const { price, currency } = await getPriceDetails(stripeProductId);
+      const setupIntent = await stripe.setupIntents.create({
+        customer: stripeCustomerId, // If you have an existing customer, you can associate the SetupIntent with them
+        // Add any other necessary configuration
+      });
 
-      if (!stripeProductId) {
+      ctx.body = {
+        clientSecret: setupIntent.client_secret
+      };
+    } catch (error) {
+      ctx.throw(500, error.message);
+    }
+  },
+
+  createPaymentIntent: async (ctx) => {
+    console.log("Attempting createPaymentIntent...")
+    const { membershipType } = ctx.request.body;
+
+    // Assuming getStripePriceId returns the Stripe Price ID for the membership type
+    const stripePriceId = getStripePriceId(membershipType);
+    const priceDetails = await getPriceDetails(stripePriceId);
+    console.log("stripePriceId:", stripePriceId )
+    console.log("priceDetails:", priceDetails )
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: priceDetails.amount,
+      currency: priceDetails.currency,
+      // other configurations if necessary
+    });
+    console.log("Client secret:", paymentIntent.client_secret)
+    ctx.body = {
+      clientSecret: paymentIntent.client_secret
+    }
+  },
+  createSubscription: async (ctx) => {
+    try {
+      console.log("Creating subscription...");
+      const { membershipType, userId, paymentMethodId, customerName } = ctx.request.body;
+
+      // Retrieve the Stripe Customer ID for the user
+      const user = await strapi.entityService.findOne('plugin::users-permissions.user', userId, {});
+      const stripeCustomerId = user.stripeCustomerId;
+      const userEmail = user.email;
+
+      const stripePriceId = getStripePriceId(membershipType);
+      if (!stripePriceId) {
         return ctx.badRequest('Invalid membership type');
       }
 
-      // Create a payment intent
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: price, // should be in the smallest currency unit, e.g., cents
-        currency: currency,
-        customer: stripeCustomerId,
-          metadata: {
-            priceId: stripeProductId, // Replace with your actual product ID
-            strapiUserId: userId,
+      if (stripeCustomerId) {
+        // Update existing Stripe customer with the new name
+        await stripe.customers.update(stripeCustomerId, {
+          name: customerName,
+        });
+        await strapi.entityService.update('plugin::users-permissions.user', userId,  {
+          data: {
+            fullName: customerName,
+          }
+        })
+      }
+
+      // Attach the new payment method to the Stripe customer
+      try {
+        console.log("Attempting to attach payment method");
+        await stripe.paymentMethods.attach(paymentMethodId, {
+          customer: stripeCustomerId,
+        });
+      } catch (error) {
+        console.error("Error attaching payment method:", error);
+        throw error;
+      }
+
+      // Set the default payment method for the customer
+      await stripe.customers.update(stripeCustomerId, {
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
         },
       });
 
-      // Send the client secret to the frontend
+      // Create a subscription
+      const subscription = await stripe.subscriptions.create({
+        customer: stripeCustomerId,
+        items: [{ price: stripePriceId }],
+        expand: ['latest_invoice.payment_intent'],
+        metadata: {
+          stripePriceId: stripePriceId,
+          strapiUserId: userId,
+          userEmail: userEmail,
+        },
+      });
+
+      // Send relevant data to the frontend
       ctx.body = {
-        stripeClientSecret: paymentIntent.client_secret,
-        stripeProductId,
+        subscriptionId: subscription.id,
       };
     } catch (error) {
       ctx.throw(500, error);
     }
   },
-  verifyPayment: async (ctx) => {
-    console.log("Verifying payment...")
-    const { paymentIntentId } = ctx.request.body;
-    console.log("paymentIntentId: ", paymentIntentId)
+
+  verifySubscription: async (ctx) => {
+    console.log("Verifying subscription...")
+    const { subscriptionId } = ctx.request.body;
+    console.log("subscriptionId: ", subscriptionId)
 
     try {
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      // Retrieve the subscription from Stripe
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-      if (paymentIntent.status === 'succeeded') {
-        // Handle successful payment here (e.g., update user status, record transaction)
-        ctx.send({ status: 'success', message: 'Payment successful' });
+      // Check the subscription status
+      if (subscription.status === 'active' || subscription.status === 'trialing') {
+        // Handle successful subscription here (e.g., update user status, record transaction)
+        ctx.send({ status: 'success', message: 'Subscription successful' });
       } else {
-        // Handle failed payment here
-        ctx.send({ status: 'failure', message: 'Payment failed' });
+        // Handle failed or incomplete subscription setup here
+        ctx.send({ status: 'failure', message: 'Subscription setup failed' });
       }
     } catch (error) {
-      ctx.throw(500, `Error verifying payment: ${error.message}`);
+      ctx.throw(500, `Error verifying subscription: ${error.message}`);
     }
   },
+
   webhook: async (ctx) => {
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
     const sig = ctx.request.headers['stripe-signature'];
 
     let event;
     let userDataId;
-    
-    //const stripeCustomerId = '???';
-    //console.log("FOUND STRIPE CUSTOMER ID: ", stripeCustomerId)
 
     try {
       //console.log(ctx.request.rawBody)
@@ -125,31 +191,18 @@ module.exports = {
       case 'payment_intent.created':
         console.log('PaymentIntent was created...');
         break;
-      //case 'payment_intent.succeeded':
-      //  console.log('PaymentIntent was successful...');
-      //  break;
-      //case 'checkout.session.completed':
       //case 'charge.succeeded':
-      case 'payment_intent.succeeded':
+      //case 'payment_intent.succeeded':
+      case 'customer.subscription.created':
         console.log('PaymentIntent succeeded...');
-        const paymentIntent = event.data.object;
+        const subscriptionCreated = event.data.object;
 
         // Access the Stripe customer ID from the payment intent
-        const stripeCustomerId = paymentIntent.customer;
-        const stripePriceId = paymentIntent.metadata.priceId;
+        const stripeCustomerId = subscriptionCreated.customer;
+        const stripePriceId = subscriptionCreated.metadata.stripePriceId;
         console.log("Stripe Price Id: ", stripePriceId)
         console.log('Stripe Customer ID:', stripeCustomerId);
         try {
-          
-          // Get Stripe customer ID from the payment intent
-          //const stripeCustomerId = checkoutSessionSucceeded.customer;
-          //const customerDetails = checkoutSessionSucceeded.customer_details;
-
-          //console.log("Customer Details: ", customerDetails)
-
-          //const customerName = customerDetails.name;
-
-          //console.log("Customer Name: ", customerName)
 
           const user = await strapi.entityService.findMany('plugin::users-permissions.user', { 
             filters: {
@@ -161,6 +214,7 @@ module.exports = {
 
           const userId = user[0].id
 
+          
           const userdata = await strapi.entityService.findMany('api::userdata.userdata', {
             populate: "owner",
             filters: {
@@ -182,33 +236,47 @@ module.exports = {
           }
           
           console.log("Stripe ID:", stripeCustomerId)
+
+          function getFreeCredits(stripePriceId) {
+            switch (stripePriceId) {
+              case process.env.MEMBERSHIP_BASIC:
+                return 50;
+              case process.env.MEMBERSHIP_PRO:
+                return 120;
+              case process.env.MEMBERSHIP_PREMIUM:
+                return 2000;
+              default:
+                return 0; // default case if none of the conditions are met
+            }
+          }
           
           // Update userdata by user id: field paid membership to true
           console.log('Trying to update userdata paid membership field...');
-          const updateUserData = await strapi.entityService.update('plugin::users-permissions.user', userId,  {
+          const updateUser = await strapi.entityService.update('plugin::users-permissions.user', userId,  {
             data: {
-              paidMembershipTierOne: stripePriceId === process.env.MEMBERSHIP_BASIC ? true : false,
-              paidMembershipTierTwo: stripePriceId === process.env.MEMBERSHIP_PRO ? true : false,
-              paidMembershipTierThree: stripePriceId === process.env.MEMBERSHIP_PREMIUM ? true : false,
-              //fullName: customerName,
+              paidMembershipTierOne: stripePriceId === process.env.MEMBERSHIP_BASIC,
+              paidMembershipTierTwo: stripePriceId === process.env.MEMBERSHIP_PRO,
+              paidMembershipTierThree: stripePriceId === process.env.MEMBERSHIP_PREMIUM,
               freeAccount: false,
             }
           })
-          /*
-          const updateUserName = await strapi.entityService.update("plugin::users-permissions.user", userId, {
-            data: {
-              fullName: customerName,
-            }
-          });*/
+
+          if (userdata) {
+            const updateUserData = await strapi.entityService.update('api::userdata.userdata', userDataId, {
+              data: {
+                freeCreditsLeft: getFreeCredits(stripePriceId)
+              }
+            })
+          }
 
           if (userDataId) {
             console.log('userDataId exists...');
             try {
               // Use Strapi's email service
-              console.log('Attempting to send welcome email to: ', customerDetails.email);
+              console.log('Attempting to send welcome email to: ', subscriptionCreated.metadata.userEmail);
               await strapi.plugins['email'].services.email.send({
                 from: 'Nick at eatclassy.com <nick@eatclassy.com>',
-                to: customerDetails.email, // replace with user's email
+                to: subscriptionCreated.metadata.userEmail, // replace with user's email
                 subject: 'EatClassy Membership Activated!',
                 text: 'Congratulations! Your EatClassy membership has been activated. You can now create more recipes and save recipes to your account. To manage your membership, use your account billing page at https://www.eatclassy.com/settings/billing',
                 html: '<p style="font-family: Arial, sans-serif;">Congratulations! Your EatClassy membership has been activated. You can now create more recipes and save recipes to your account.</p><p style="font-family: Arial, sans-serif;">To manage your subscription, use your account billing page at <a href="https://www.eatclassy.com/settings/billing">https://www.eatclassy.com/settings/billing</a>.</p> <p>- Nick at eatclassy</p>',
@@ -224,6 +292,47 @@ module.exports = {
 
         console.log('Checkout session complete.');        
 
+        break;
+
+      case 'invoice.payment_succeeded':
+        console.log('Invoice payment succeeded...');
+        const invoice = event.data.object;
+
+        // Check if it's a subscription invoice
+        if (invoice.billing_reason === 'subscription_cycle') {
+          const stripeCustomerId = invoice.customer;
+          const stripePriceId = invoice.lines.data[0].price.id; // Assuming single subscription item
+
+          // Your existing logic to find the user based on stripeCustomerId
+          const user = await strapi.entityService.findMany('plugin::users-permissions.user', { 
+            filters: { stripeCustomerId }
+          });
+
+          if (!user || user.length === 0) {
+            throw new Error('User not found for the given Stripe Customer ID');
+          }
+
+          const userId = user[0].id;
+
+          // Your existing logic to find userdata
+          const userdata = await strapi.entityService.findMany('api::userdata.userdata', {
+            populate: "owner",
+            filters: { 'owner': { id: userId } },
+          });
+
+          if (!userdata || userdata.length === 0) {
+            throw new Error('User data not found');
+          }
+
+          userDataId = userdata[0].id;
+
+          // Update userdata for subscription renewal
+          const updateUserData = await strapi.entityService.update('api::userdata.userdata', userDataId, {
+            data: {
+              freeCreditsLeft: getFreeCredits(stripePriceId)
+            }
+          });
+        }
         break;
 
       default:

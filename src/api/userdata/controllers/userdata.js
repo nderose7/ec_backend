@@ -21,7 +21,8 @@ module.exports = createCoreController('api::userdata.userdata',
       populate: {
         recipes: {
           populate: "*"
-        }
+        },
+        avatar: "*",
       },
       filters: {
         ...filters,

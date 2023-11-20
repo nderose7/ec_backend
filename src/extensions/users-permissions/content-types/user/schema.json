@@ -67,7 +67,8 @@
     },
     "freeRecipesLeft": {
       "type": "integer",
-      "default": 50
+      "default": 50,
+      "max": 2000
     },
     "userdata": {
       "type": "relation",
@@ -105,6 +106,9 @@
     "paidMembershipTierThree": {
       "type": "boolean",
       "default": false
+    },
+    "fullName": {
+      "type": "string"
     }
   }
 }

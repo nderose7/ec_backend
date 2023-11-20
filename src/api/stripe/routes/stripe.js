@@ -5,24 +5,32 @@ module.exports = {
   routes: [
     {
       method: "POST",
-      path: "/membership-type",
-      handler: "stripe.membershipType",
+      path: "/create-payment-intent",
+      handler: "stripe.createPaymentIntent",
       config: {
         policies: []
       }
     },
     {
       method: "POST",
-      path: "/payments/verify",
-      handler: "stripe.verifyPayment",
+      path: "/create-setup-intent",
+      handler: "stripe.createSetupIntent",
       config: {
         policies: []
       }
     },
     {
-      method: "GET",
-      path: "/test",
-      handler: "stripe.test",
+      method: "POST",
+      path: "/create-subscription",
+      handler: "stripe.createSubscription",
+      config: {
+        policies: []
+      }
+    },
+    {
+      method: "POST",
+      path: "/verify-subscription",
+      handler: "stripe.verifySubscription",
       config: {
         policies: []
       }

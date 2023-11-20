@@ -24,9 +24,6 @@
       "target": "plugin::users-permissions.user",
       "mappedBy": "userdata"
     },
-    "name": {
-      "type": "string"
-    },
     "avatar": {
       "type": "media",
       "multiple": false,
@@ -41,7 +38,7 @@
     "freeCreditsLeft": {
       "type": "integer",
       "default": 25,
-      "max": 50
+      "max": 2000
     }
   }
 }
