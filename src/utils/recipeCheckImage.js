@@ -65,23 +65,24 @@ async function generateImageWithDALLE(recipeName, recipeUID) {
             .toFile(finalFilePath);
         });
 
-      const metadata = await sharp(finalFilePath).metadata();
-
+      // Upload the file to DigitalOcean Spaces
+      const stream = fs.createReadStream(finalFilePath);
       const fileData = {
-        path: finalFilePath,
+        path: stream, // The file stream
         name: finalFileName,
-        mime: 'image/jpeg',
+        type: 'image/jpeg',
         size: fs.statSync(finalFilePath).size,
-        width: metadata.width,
-        height: metadata.height,
-        url: `/uploads/images/${finalFileName}`,
-        previewUrl: `/uploads/images/${finalFileName}`,
       };
-      const file = await strapi.plugins['upload'].services.upload.add(fileData);
 
-      fs.unlinkSync(filePath);
+      const uploadedFile = await strapi.plugins.upload.services.upload.upload({
+        data: {}, // Any additional data you want to store
+        files: fileData, // File data for upload
+      });
 
-      return file;  // Return the file object
+      fs.unlinkSync(filePath); // Delete the local temp file
+      fs.unlinkSync(finalFilePath); // Delete the final local file
+
+      return uploadedFile[0] || null; // Adjust based on the returned structure
     } catch (error) {
       console.error('Error downloading or processing image:', error);
       return null;

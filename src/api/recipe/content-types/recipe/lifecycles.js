@@ -54,32 +54,34 @@ module.exports = {
           .jpeg({ quality: 10 }) // Adjust quality as needed
           .metadata()
           .then(metadata => {
-            const cropHeight = metadata.height - 400; // Reduce height by 300px (150px off top and bottom)
+            const cropHeight = metadata.height - 400; // Adjust cropping as needed
             return sharp(filePath)
               .extract({ left: 0, top: 150, width: metadata.width, height: cropHeight }) // Crop the image
               .toFile(finalFilePath);
           });
 
-        // Use sharp to get image metadata from the converted and cropped file
-        const metadata = await sharp(finalFilePath).metadata();
+        // Create a read stream for the file
+        const stream = fs.createReadStream(finalFilePath);
 
+        // Upload the file to DigitalOcean Spaces
         const fileData = {
-          path: finalFilePath,
+          path: stream, // The file stream
           name: finalFileName,
-          mime: 'image/jpeg',
+          type: 'image/jpeg',
           size: fs.statSync(finalFilePath).size,
-          width: metadata.width,
-          height: metadata.height,
-          url: `/uploads/images/${finalFileName}`,
-          previewUrl: `/uploads/images/${finalFileName}`,
         };
-        const file = await strapi.plugins['upload'].services.upload.add(fileData);
 
-        // Associate the file with the recipe
-        data.image = file.id;
+        const uploadedFile = await strapi.plugins.upload.services.upload.upload({
+          data: {}, // Any additional data you want to store
+          files: fileData, // File data for upload
+        });
 
-        // Optionally delete the original downloaded PNG file
+        // Associate the uploaded file with the recipe
+        data.image = uploadedFile[0].id || null;
+
+        // Cleanup: delete the local temp files
         fs.unlinkSync(filePath);
+        fs.unlinkSync(finalFilePath);
       } catch (error) {
         console.error('Error downloading or processing image:', error);
       }

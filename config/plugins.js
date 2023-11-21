@@ -16,4 +16,17 @@ module.exports = ({ env }) => ({
       },
     },
   },
+  upload: {
+    config: {
+      provider: '@strapi/provider-upload-aws-s3',
+      providerOptions: {
+        accessKeyId: env('DO_SPACES_ACCESS_KEY_ID'),
+        secretAccessKey: env('DO_SPACES_SECRET_ACCESS_KEY'),
+        endpoint: env('DO_SPACES_ENDPOINT'), // e.g., 'nyc3.digitaloceanspaces.com'
+        params: {
+          Bucket: env('DO_SPACES_BUCKET'),
+        },
+      },
+    },
+  },
 })
