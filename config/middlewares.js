@@ -14,7 +14,7 @@ module.exports = [
   {
     name: 'strapi::cors',
     config: {
-      origin: ['https://www.eatclassy.com'], 
+      origin: '*', 
     },
   },
   'strapi::poweredBy',
