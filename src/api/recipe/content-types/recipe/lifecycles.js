@@ -41,51 +41,68 @@ module.exports = {
     }
 
     if (image_url) {
+      let tempFilePath, finalFilePath;
       try {
-        const tempFileName = `${data.uid || proposedUID}-temp.png`; // Temporary file name for the downloaded PNG
-        const finalFileName = `${data.uid || proposedUID}.jpg`; // Final file name for the JPEG
-        const filePath = path.join(__dirname, '../../../../../public/uploads/images', tempFileName);
-        const finalFilePath = path.join(__dirname, '../../../../../public/uploads/images', finalFileName);
+        console.log("Image url found...")
+        const tempFileName = `${data.uid || proposedUID}-temp.png`;
+        const finalFileName = `${data.uid || proposedUID}.jpg`;
+        tempFilePath = path.join(__dirname, '../../../../../public/uploads/images', tempFileName);
+        finalFilePath = path.join(__dirname, '../../../../../public/uploads/images', finalFileName);
 
-        await downloadImage(image_url, filePath);
+        console.log("image_url, path: ", image_url, tempFilePath)
+        await downloadImage(image_url, tempFilePath);
 
-        // Convert PNG to JPEG, optimize, and then crop
-        await sharp(filePath)
-          .jpeg({ quality: 10 }) // Adjust quality as needed
+        console.log("Running sharp")
+        await sharp(tempFilePath)
+          .jpeg({ quality: 10 })
           .metadata()
           .then(metadata => {
-            const cropHeight = metadata.height - 400; // Adjust cropping as needed
-            return sharp(filePath)
-              .extract({ left: 0, top: 150, width: metadata.width, height: cropHeight }) // Crop the image
+            const cropHeight = metadata.height - 400;
+            return sharp(tempFilePath)
+              .extract({ left: 0, top: 150, width: metadata.width, height: cropHeight })
               .toFile(finalFilePath);
           });
 
-        // Create a read stream for the file
-        const stream = fs.createReadStream(finalFilePath);
+        if (fs.existsSync(finalFilePath) && fs.statSync(finalFilePath).size > 0) {
+          console.log("FinalFileName: ", finalFileName)
+          // Read the file into a buffer for upload
+          const buffer = fs.readFileSync(finalFilePath);
+          const fileData = {
+            path: buffer, // Pass buffer instead of stream
+            name: finalFileName,
+            type: 'image/jpeg',
+            size: buffer.length,
+          };
 
-        // Upload the file to DigitalOcean Spaces
-        const fileData = {
-          path: stream, // The file stream
-          name: finalFileName,
-          type: 'image/jpeg',
-          size: fs.statSync(finalFilePath).size,
-        };
+          const uploadedFile = await strapi.plugins.upload.services.upload.upload({
+            data: {}, // Any additional data you want to store
+            files: {
+              path: finalFilePath, // Pass the file path instead of the buffer
+              name: finalFileName,
+              type: 'image/jpeg',
+            },
+          });
 
-        const uploadedFile = await strapi.plugins.upload.services.upload.upload({
-          data: {}, // Any additional data you want to store
-          files: fileData, // File data for upload
-        });
+          // Associate the uploaded file with the recipe
+          data.image = uploadedFile[0].id || null;
+        } else {
+          throw new Error(`Processed file not found or empty: ${finalFilePath}`);
+        }
 
-        // Associate the uploaded file with the recipe
-        data.image = uploadedFile[0].id || null;
-
-        // Cleanup: delete the local temp files
-        fs.unlinkSync(filePath);
-        fs.unlinkSync(finalFilePath);
       } catch (error) {
-        console.error('Error downloading or processing image:', error);
+          console.error('Error downloading or processing image:', error);
+          // Handle specific error scenarios here
+      } finally {
+          // Cleanup: delete the local temp files if they exist
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+          }
+          if (fs.existsSync(finalFilePath)) {
+            fs.unlinkSync(finalFilePath);
+          }
       }
     }
+
 
   },
 };
