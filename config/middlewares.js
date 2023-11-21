@@ -6,7 +6,7 @@ module.exports = [
     config: {
       contentSecurityPolicy: {
         directives: {
-          "img-src": ["'self'", "data:", "blob:", "https://market-assets.strapi.io", "https://eatclassy.nyc3.cdn.digitaloceanspaces.com"]
+          "img-src": ["'self'", "data:", "blob:", "https://market-assets.strapi.io", "https://eatclassy.nyc3.cdn.digitaloceanspaces.com", "https://eatclassy.nyc3.digitaloceanspaces.com"]
         },
       },
     },
