@@ -5,6 +5,14 @@ module.exports = {
   routes: [
     {
       method: "POST",
+      path: "/create-customer-portal-session",
+      handler: "stripe.createCustomerPortalSession",
+      config: {
+        policies: []
+      }
+    },
+    {
+      method: "POST",
       path: "/calculate-immediate-charge",
       handler: "stripe.calculateImmediateCharge",
       config: {

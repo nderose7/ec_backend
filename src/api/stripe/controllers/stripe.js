@@ -46,6 +46,21 @@ async function getPriceDetails(stripePriceId) {
 
 module.exports = {
 
+  createCustomerPortalSession: async (ctx) => {
+    const user = ctx.state.user;
+
+    if (!user.stripeCustomerId) {
+      return ctx.badRequest('Stripe Customer ID not found');
+    }
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: user.stripeCustomerId,
+      return_url: 'https://www.eatclassy.com/settings/billing',
+    });
+
+    ctx.send({ url: session.url });
+  },
+
   calculateImmediateCharge: async (ctx) => {
     try {
       const { currentSubscriptionId, newMembershipType } = ctx.request.body;
