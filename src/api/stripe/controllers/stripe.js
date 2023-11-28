@@ -6,6 +6,19 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
+function getFreeCredits(stripePriceId) {
+  switch (stripePriceId) {
+    case process.env.MEMBERSHIP_BASIC:
+      return 50;
+    case process.env.MEMBERSHIP_PRO:
+      return 120;
+    case process.env.MEMBERSHIP_PREMIUM:
+      return 2000;
+    default:
+      return 0; // default case if none of the conditions are met
+  }
+}
+
 function getStripePriceId(membershipType) {
   // Define your mapping logic here
   const mapping = {
@@ -161,6 +174,9 @@ module.exports = {
           id: subscription.items.data[0].id,
           price: newPriceId,
         }],
+        metadata: {
+          stripePriceId: newPriceId,
+        },
         proration_behavior: 'always_invoice',
         // Add other necessary parameters as per your requirement
       });
@@ -378,18 +394,7 @@ module.exports = {
           
           console.log("Stripe ID:", stripeCustomerId)
 
-          function getFreeCredits(stripePriceId) {
-            switch (stripePriceId) {
-              case process.env.MEMBERSHIP_BASIC:
-                return 50;
-              case process.env.MEMBERSHIP_PRO:
-                return 120;
-              case process.env.MEMBERSHIP_PREMIUM:
-                return 2000;
-              default:
-                return 0; // default case if none of the conditions are met
-            }
-          }
+
           
           // Update userdata by user id: field paid membership to true
           console.log('Trying to update userdata paid membership field...');
@@ -437,14 +442,17 @@ module.exports = {
 
       case 'invoice.payment_succeeded':
         console.log('Invoice payment succeeded...');
+        /*
         const invoice = event.data.object;
 
+        console.log("Invoice: ", invoice)
+
         // Check if it's a subscription invoice
-        if (invoice.billing_reason === 'subscription_cycle' || invoice.billing_reason === 'subscription_create') {
+        if (invoice.billing_reason === 'subscription_cycle' || invoice.billing_reason === 'subscription_create' || invoice.billing_reason === 'subscription_update') {
           console.log('Billing reason is subscription.');
           const stripeCustomerId = invoice.customer;
           console.log('Customer Id: ', stripeCustomerId);
-          const stripePriceId = invoice.lines.data[0].price.id; // Assuming single subscription item
+          const stripePriceId = invoice.metadata.stripePriceId;
           console.log('stripePriceId: ', stripePriceId);
           
           // Your existing logic to find the user based on stripeCustomerId
@@ -452,11 +460,15 @@ module.exports = {
             filters: { stripeCustomerId }
           });
 
+          
+
           if (!user || user.length === 0) {
             throw new Error('User not found for the given Stripe Customer ID');
           }
 
           const userId = user[0].id;
+
+          //console.log("User: ", userId)
 
           // Your existing logic to find userdata
           const userdata = await strapi.entityService.findMany('api::userdata.userdata', {
@@ -470,13 +482,23 @@ module.exports = {
 
           userDataId = userdata[0].id;
 
+          console.log("Updating userdata: ", userDataId)
           // Update userdata for subscription renewal
           const updateUserData = await strapi.entityService.update('api::userdata.userdata', userDataId, {
             data: {
               freeCreditsLeft: getFreeCredits(stripePriceId)
             }
           });
-        }
+          console.log("Updating user: ", userId, stripePriceId)
+          const updateUser = await strapi.entityService.update('plugin::users-permissions.user', userId,  {
+            data: {
+              paidMembershipTierOne: stripePriceId === process.env.MEMBERSHIP_BASIC,
+              paidMembershipTierTwo: stripePriceId === process.env.MEMBERSHIP_PRO,
+              paidMembershipTierThree: stripePriceId === process.env.MEMBERSHIP_PREMIUM,
+              freeAccount: false,
+            }
+          })
+        }*/
         break;
 
       case 'invoice.payment_failed':
@@ -548,8 +570,48 @@ module.exports = {
 
       case 'customer.subscription.updated':
         console.log('Subscription was updated...');
-        // Existing logic for updating user’s subscription in Strapi
-        // ...
+        const subscriptionUpdated = event.data.object;
+        console.log(subscriptionUpdated)
+        //console.log('Billing reason is subscription.');
+        //const stripeCustomerId = invoice.customer;
+        //console.log('Customer Id: ', stripeCustomerId);
+        //const stripePriceId = invoice.metadata.stripePriceId;
+        //console.log('stripePriceId: ', stripePriceId);
+
+        const newSubscriptionId = subscriptionUpdated.metadata.stripePriceId
+        const newSubUserId = subscriptionUpdated.metadata.strapiUserId
+
+
+        //console.log("User: ", userId)
+
+        // Your existing logic to find userdata
+        const userdata = await strapi.entityService.findMany('api::userdata.userdata', {
+          populate: "owner",
+          filters: { 'owner': { id: newSubUserId } },
+        });
+
+        if (!userdata || userdata.length === 0) {
+          throw new Error('User data not found');
+        }
+
+        const newSubUserDataId = userdata[0].id;
+
+        console.log("Updating userdata: ", newSubUserDataId)
+        // Update userdata for subscription renewal
+        const updateUserData = await strapi.entityService.update('api::userdata.userdata', newSubUserDataId, {
+          data: {
+            freeCreditsLeft: getFreeCredits(newSubscriptionId)
+          }
+        });
+        console.log("Updating user: ", newSubUserId, newSubscriptionId)
+        const updateUser = await strapi.entityService.update('plugin::users-permissions.user', newSubUserId,  {
+          data: {
+            paidMembershipTierOne: newSubscriptionId === process.env.MEMBERSHIP_BASIC,
+            paidMembershipTierTwo: newSubscriptionId === process.env.MEMBERSHIP_PRO,
+            paidMembershipTierThree: newSubscriptionId === process.env.MEMBERSHIP_PREMIUM,
+            freeAccount: false,
+          }
+        })
         break;
 
 
