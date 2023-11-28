@@ -370,6 +370,7 @@ module.exports = {
           console.log("Webhook User Def: ", user)
 
           const userId = user[0].id
+          const userFullName = user[0].fullName
 
           
           const userdata = await strapi.entityService.findMany('api::userdata.userdata', {
@@ -424,8 +425,9 @@ module.exports = {
                 from: 'Nick at EatClassy <nick@eatclassy.com>',
                 to: subscriptionCreated.metadata.userEmail, // replace with user's email
                 subject: 'EatClassy Membership Activated!',
-                text: 'Congratulations! Your new EatClassy membership has been activated. You can now create more recipes and save recipes to your account. To manage your membership, use your account billing page at https://www.eatclassy.com/settings/billing',
-                html: '<p style="font-family: Arial, sans-serif;">Congratulations! Your new EatClassy membership has been activated. You can now create more recipes and save recipes to your account.</p><p style="font-family: Arial, sans-serif;">To manage your subscription, use your account billing page at <a href="https://www.eatclassy.com/settings/billing">https://www.eatclassy.com/settings/billing</a>.</p> <p>- Nick at EatClassy</p>',
+                text: `Congratulations ${userFullName}! Your new EatClassy membership has been activated. You can now create more recipes and save recipes to your account. To manage your membership, use your account billing page at https://www.eatclassy.com/settings/billing`,
+                html: `<div><img src="https://eatclassy.nyc3.digitaloceanspaces.com/ec-logo-green.png" alt="EatClassy" width="133" height="35" />
+              </div><br /><p style="font-family: Arial, sans-serif;">Congratulations ${userFullName}! Your new EatClassy membership has been activated. You can now create more recipes and save recipes to your account.</p><p style="font-family: Arial, sans-serif;">To manage your membership, use your account billing page at <a href="https://www.eatclassy.com/settings/billing">https://www.eatclassy.com/settings/billing</a>.</p> <p>- Nick at EatClassy</p>`,
               });
 
             } catch (err) {
@@ -503,10 +505,11 @@ module.exports = {
 
       case 'invoice.payment_failed':
         console.log('Invoice payment failed...');
-
+        const paymentFailed = event.data.object;
+        const stripeCustomerIdFailed = paymentFailed.customer;
         // Find the user based on stripeCustomerId
         const user = await strapi.entityService.findMany('plugin::users-permissions.user', { 
-          filters: { stripeCustomerId }
+          filters: { stripeCustomerId: stripeCustomerIdFailed }
         });
 
         if (!user || user.length === 0) {
@@ -514,6 +517,9 @@ module.exports = {
         }
 
         const userId = user[0].id;
+        const userEmail = user[0].email;
+        const userName = user[0].fullName;
+
 
         // Update the user data in Strapi
         await strapi.entityService.update('plugin::users-permissions.user', userId, {
@@ -525,6 +531,22 @@ module.exports = {
           }
         });
 
+        try {
+          // Use Strapi's email service
+          console.log('Attempting to send welcome email to: ', userEmail);
+          await strapi.plugins['email'].services.email.send({
+            from: 'Nick at EatClassy <nick@eatclassy.com>',
+            to: userEmail, // replace with user's email
+            subject: 'EatClassy Payment Failed',
+            text: `Dear ${userName || userEmail}, thanks for using EatClassy. We wanted to inform you that your credit card payment has failed. To avoid an interruption in service, please check here for more details: https://www.eatclassy.com/settings/billing`,
+            html: `<div><img src="https://eatclassy.nyc3.digitaloceanspaces.com/ec-logo-green.png" alt="EatClassy" width="133" height="35" />
+            </div><br /><p style="font-family: Arial, sans-serif;">Dear ${userName || userEmail},<br> thanks for using EatClassy. We wanted to inform you that your credit card payment has failed. To avoid an interruption in service, please check here for more details: <a href="https://www.eatclassy.com/settings/billing">https://www.eatclassy.com/settings/billing</a>.</p> <p>- Nick at EatClassy</p>`,
+          });
+
+        } catch (err) {
+          console.error('Error sending email:', err);
+        }
+
         // Handle other necessary actions like notifying the user
         break;
 
@@ -535,7 +557,7 @@ module.exports = {
 
         // Find the user based on stripeCustomerId
         const currentUser = await strapi.entityService.findMany('plugin::users-permissions.user', { 
-          filters: { stripeCustomerId }
+          filters: { stripeCustomerId: stripeCustomerId }
         });
 
         if (!user || user.length === 0) {
@@ -572,17 +594,11 @@ module.exports = {
         console.log('Subscription was updated...');
         const subscriptionUpdated = event.data.object;
         console.log(subscriptionUpdated)
-        //console.log('Billing reason is subscription.');
-        //const stripeCustomerId = invoice.customer;
-        //console.log('Customer Id: ', stripeCustomerId);
-        //const stripePriceId = invoice.metadata.stripePriceId;
-        //console.log('stripePriceId: ', stripePriceId);
 
         const newSubscriptionId = subscriptionUpdated.metadata.stripePriceId
         const newSubUserId = subscriptionUpdated.metadata.strapiUserId
 
-
-        //console.log("User: ", userId)
+        const currentUserUpdated = await strapi.entityService.findOne('plugin::users-permissions.user', newSubUserId);
 
         // Your existing logic to find userdata
         const userdata = await strapi.entityService.findMany('api::userdata.userdata', {
@@ -612,6 +628,20 @@ module.exports = {
             freeAccount: false,
           }
         })
+        try {
+          // Use Strapi's email service
+          await strapi.plugins['email'].services.email.send({
+            from: 'Nick at EatClassy <nick@eatclassy.com>',
+            to: currentUserUpdated.email, // replace with user's email
+            subject: 'EatClassy Membership Activated!',
+            text: `Hello ${currentUserUpdated.fullName || currentUserUpdated.email}! Your EatClassy membership plan has been updated successfully. To manage your membership, use your account billing page at https://www.eatclassy.com/settings/billing`,
+            html: `<div><img src="https://eatclassy.nyc3.digitaloceanspaces.com/ec-logo-green.png" alt="EatClassy" width="133" height="35" />
+          </div><br /><p style="font-family: Arial, sans-serif;">Hello ${currentUserUpdated.fullName || currentUserUpdated.email}! Your EatClassy membership plan has been updated successfully.</p><p style="font-family: Arial, sans-serif;">To manage your membership, use your account billing page at <a href="https://www.eatclassy.com/settings/billing">https://www.eatclassy.com/settings/billing</a>.</p> <p>- Nick at EatClassy</p>`,
+          });
+
+        } catch (err) {
+          console.error('Error sending email:', err);
+        }
         break;
 
 
