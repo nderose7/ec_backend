@@ -3,16 +3,19 @@ module.exports = ({ env }) => ({
     config: {
       provider: 'nodemailer',
       providerOptions: {
-        host: env('SMTP_HOST'),
-        port: env('SMTP_PORT'),
-        auth: {
-          user: env('SMTP_USERNAME'),
-          pass: env('SMTP_PASSWORD'),
-        },
+        host: env('SMTP_HOST', 'localhost'),
+        port: env.int('SMTP_PORT', 1025),
+        ignoreTLS: true,
+        ...(env('SMTP_USERNAME') && {
+          auth: {
+            user: env('SMTP_USERNAME'),
+            pass: env('SMTP_PASSWORD'),
+          },
+        }),
       },
       settings: {
-        defaultFrom: 'Nick at EatClassy.com <nick@eatclassy.com>',
-        defaultReplyTo: 'nick@eatclassy.com',
+        defaultFrom: env('EMAIL_DEFAULT_FROM', 'Nick at EatClassy.com <nick@eatclassy.com>'),
+        defaultReplyTo: env('EMAIL_DEFAULT_REPLY_TO', 'nick@eatclassy.com'),
       },
     },
   },

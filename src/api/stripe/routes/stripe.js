@@ -5,6 +5,30 @@ module.exports = {
   routes: [
     {
       method: "POST",
+      path: "/calculate-immediate-charge",
+      handler: "stripe.calculateImmediateCharge",
+      config: {
+        policies: []
+      }
+    },
+    {
+      method: "POST",
+      path: "/preview-plan-change",
+      handler: "stripe.previewPlanChange",
+      config: {
+        policies: []
+      }
+    },
+    {
+      method: "POST",
+      path: "/update-subscription",
+      handler: "stripe.updateSubscription",
+      config: {
+        policies: []
+      }
+    },
+    {
+      method: "POST",
       path: "/create-payment-intent",
       handler: "stripe.createPaymentIntent",
       config: {

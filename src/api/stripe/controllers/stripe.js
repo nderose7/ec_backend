@@ -17,6 +17,17 @@ function getStripePriceId(membershipType) {
   return mapping[membershipType] || null;
 }
 
+function getMembershipTypeByStripePriceId(stripePriceId) {
+  const mapping = {
+    'basic': process.env.MEMBERSHIP_BASIC,
+    'pro': process.env.MEMBERSHIP_PRO,
+    'premium': process.env.MEMBERSHIP_PREMIUM,
+  };
+
+  // Find the membership type whose value matches the stripePriceId
+  return Object.keys(mapping).find(key => mapping[key] === stripePriceId) || null;
+}
+
 async function getPriceDetails(stripePriceId) {
   try {
     console.log("Getting price details")
@@ -34,6 +45,121 @@ async function getPriceDetails(stripePriceId) {
 }
 
 module.exports = {
+
+  calculateImmediateCharge: async (ctx) => {
+    try {
+      const { currentSubscriptionId, newMembershipType } = ctx.request.body;
+
+      // Convert membership type to Stripe price ID
+      const newPriceId = getStripePriceId(newMembershipType);
+
+      if (!newPriceId) {
+        ctx.throw(400, 'Invalid membership type');
+      }
+
+      // Fetch the current subscription
+      const subscription = await stripe.subscriptions.retrieve(currentSubscriptionId);
+
+      // Get the current plan's price
+      const currentPriceId = subscription.items.data[0].price.id;
+      const currentPriceObject = await stripe.prices.retrieve(currentPriceId);
+      const currentPrice = currentPriceObject.unit_amount;
+
+      // Get the new plan's price
+      const newPriceObject = await stripe.prices.retrieve(newPriceId);
+      const newPrice = newPriceObject.unit_amount;
+
+      // Calculate the time remaining in the current billing cycle
+      const currentTime = Math.floor(Date.now() / 1000);
+      const timeRemaining = subscription.current_period_end - currentTime;
+
+      // Calculate the prorated charge
+      const totalPeriod = subscription.current_period_end - subscription.current_period_start;
+      const proratedCurrentCharge = (currentPrice / totalPeriod) * timeRemaining;
+      const proratedNewCharge = (newPrice / totalPeriod) * timeRemaining;
+      const immediateCharge = proratedNewCharge - proratedCurrentCharge;
+
+      ctx.send({
+        immediateCharge: Math.max(0, immediateCharge) / 100, // Convert to dollars
+        currency: currentPriceObject.currency
+      });
+    } catch (error) {
+      console.error('Error calculating immediate charge:', error);
+      ctx.throw(400, 'Error calculating immediate charge');
+    }
+  },
+
+  
+  previewPlanChange: async (ctx) => {
+    try {
+      const { currentSubscriptionId, newMembershipType } = ctx.request.body;
+
+      // Convert membership type to Stripe price ID
+      const newPriceId = getStripePriceId(newMembershipType);
+
+      if (!newPriceId) {
+        ctx.throw(400, 'Invalid membership type');
+      }
+
+      // Fetch the current subscription
+      const subscription = await stripe.subscriptions.retrieve(currentSubscriptionId);
+
+      // Set proration date to this moment:
+      const proration_date = Math.floor(Date.now() / 1000);
+
+      // Simulate updating the subscription to get the prorated invoice amount
+      const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
+        customer: subscription.customer,
+        subscription: currentSubscriptionId,
+        subscription_items: [{ price: newPriceId, id: subscription.items.data[0].id }],
+        subscription_proration_date: proration_date,
+      });
+
+      ctx.send({
+        proratedAmount: upcomingInvoice.total / 100,
+        currency: upcomingInvoice.currency,
+        upcomingInvoice: upcomingInvoice,
+      });
+    } catch (error) {
+      console.error('Error previewing plan change:', error);
+      ctx.throw(400, 'Error previewing plan change');
+    }
+  },
+
+  updateSubscription: async (ctx) => {
+    try {
+      const { currentSubscriptionId, newMembershipType } = ctx.request.body;
+
+      // Convert membership type to Stripe price ID
+      const newPriceId = getStripePriceId(newMembershipType);
+
+      if (!newPriceId) {
+        ctx.throw(400, 'Invalid membership type');
+      }
+
+      // Fetch the current subscription
+      const subscription = await stripe.subscriptions.retrieve(currentSubscriptionId);
+
+      // Update the subscription
+      const updatedSubscription = await stripe.subscriptions.update(currentSubscriptionId, {
+        items: [{
+          id: subscription.items.data[0].id,
+          price: newPriceId,
+        }],
+        proration_behavior: 'always_invoice',
+        // Add other necessary parameters as per your requirement
+      });
+
+      ctx.send({
+        message: 'Subscription updated successfully',
+        updatedSubscription: updatedSubscription
+      });
+    } catch (error) {
+      console.error('Error updating subscription:', error);
+      ctx.throw(400, 'Error updating subscription');
+    }
+  },
+
   createSetupIntent: async (ctx) => {
     try {
       console.log("Creating SetupIntent...");
@@ -275,11 +401,11 @@ module.exports = {
               // Use Strapi's email service
               console.log('Attempting to send welcome email to: ', subscriptionCreated.metadata.userEmail);
               await strapi.plugins['email'].services.email.send({
-                from: 'Nick at eatclassy.com <nick@eatclassy.com>',
+                from: 'Nick at EatClassy <nick@eatclassy.com>',
                 to: subscriptionCreated.metadata.userEmail, // replace with user's email
                 subject: 'EatClassy Membership Activated!',
-                text: 'Congratulations! Your EatClassy membership has been activated. You can now create more recipes and save recipes to your account. To manage your membership, use your account billing page at https://www.eatclassy.com/settings/billing',
-                html: '<p style="font-family: Arial, sans-serif;">Congratulations! Your EatClassy membership has been activated. You can now create more recipes and save recipes to your account.</p><p style="font-family: Arial, sans-serif;">To manage your subscription, use your account billing page at <a href="https://www.eatclassy.com/settings/billing">https://www.eatclassy.com/settings/billing</a>.</p> <p>- Nick at eatclassy</p>',
+                text: 'Congratulations! Your new EatClassy membership has been activated. You can now create more recipes and save recipes to your account. To manage your membership, use your account billing page at https://www.eatclassy.com/settings/billing',
+                html: '<p style="font-family: Arial, sans-serif;">Congratulations! Your new EatClassy membership has been activated. You can now create more recipes and save recipes to your account.</p><p style="font-family: Arial, sans-serif;">To manage your subscription, use your account billing page at <a href="https://www.eatclassy.com/settings/billing">https://www.eatclassy.com/settings/billing</a>.</p> <p>- Nick at EatClassy</p>',
               });
 
             } catch (err) {
@@ -299,10 +425,13 @@ module.exports = {
         const invoice = event.data.object;
 
         // Check if it's a subscription invoice
-        if (invoice.billing_reason === 'subscription_cycle') {
+        if (invoice.billing_reason === 'subscription_cycle' || invoice.billing_reason === 'subscription_create') {
+          console.log('Billing reason is subscription.');
           const stripeCustomerId = invoice.customer;
+          console.log('Customer Id: ', stripeCustomerId);
           const stripePriceId = invoice.lines.data[0].price.id; // Assuming single subscription item
-
+          console.log('stripePriceId: ', stripePriceId);
+          
           // Your existing logic to find the user based on stripeCustomerId
           const user = await strapi.entityService.findMany('plugin::users-permissions.user', { 
             filters: { stripeCustomerId }
@@ -335,6 +464,81 @@ module.exports = {
         }
         break;
 
+      case 'invoice.payment_failed':
+        console.log('Invoice payment failed...');
+
+        // Find the user based on stripeCustomerId
+        const user = await strapi.entityService.findMany('plugin::users-permissions.user', { 
+          filters: { stripeCustomerId }
+        });
+
+        if (!user || user.length === 0) {
+          throw new Error('User not found for the given Stripe Customer ID');
+        }
+
+        const userId = user[0].id;
+
+        // Update the user data in Strapi
+        await strapi.entityService.update('plugin::users-permissions.user', userId, {
+          data: {
+            paidMembershipTierOne: false,
+            paidMembershipTierTwo: false,
+            paidMembershipTierThree: false,
+            freeAccount: true,
+          }
+        });
+
+        // Handle other necessary actions like notifying the user
+        break;
+
+
+      case 'customer.subscription.deleted':
+        console.log('Subscription was deleted...');
+        const deletedSubscription = event.data.object;
+
+        // Find the user based on stripeCustomerId
+        const currentUser = await strapi.entityService.findMany('plugin::users-permissions.user', { 
+          filters: { stripeCustomerId }
+        });
+
+        if (!user || user.length === 0) {
+          throw new Error('User not found for the given Stripe Customer ID');
+        }
+
+        const currentUserId = user[0].id;
+
+        // Update the user data in Strapi to reflect that they no longer have an active subscription
+        await strapi.entityService.update('plugin::users-permissions.user', currentUserId, {
+          data: {
+            paidMembershipTierOne: false,
+            paidMembershipTierTwo: false,
+            paidMembershipTierThree: false,
+            freeAccount: true,
+          }
+        });
+
+        break;
+
+      case 'invoice.created':
+        console.log('Invoice created for proration or other adjustments...');
+        const invoiceCreated = event.data.object;
+        // Implement logic to handle proration invoice
+        // e.g., notify the user about the prorated charges
+        break;
+
+      case 'invoice.payment_succeeded':
+        console.log('Invoice payment succeeded, possibly for proration...');
+        // Handle post-payment logic, like confirming changes to the user
+        break;
+
+      case 'customer.subscription.updated':
+        console.log('Subscription was updated...');
+        // Existing logic for updating user’s subscription in Strapi
+        // ...
+        break;
+
+
+        
       default:
         console.log(`Unhandled event type ${event.type}`);
     }
@@ -351,21 +555,24 @@ module.exports = {
       }
 
       const customer = await stripe.customers.retrieve(customerId);
-
       let subscriptions = await stripe.subscriptions.list({ customer: customerId });
+
       subscriptions = await Promise.all(
         subscriptions.data.map(async (subscription) => {
-          // Get the product details
+          // Get the product and price details
           const product = await stripe.products.retrieve(
             subscription.items.data[0].price.product
           );
-          // Get the price details
           const price = await stripe.prices.retrieve(
             subscription.items.data[0].price.id
           );
 
+          // Get the membership type
+          const membershipType = getMembershipTypeByStripePriceId(price.id);
+
           return {
-            priceId: subscription.items.data[0].price.id,
+            priceId: price.id,
+            membershipType: membershipType, // Add membership type
             title: product.name,
             description: product.description,
             price: price.unit_amount / 100,
@@ -391,6 +598,7 @@ module.exports = {
       ctx.throw(400, 'Error fetching Stripe data');
     }
   },
+
   async cancelSubscription(ctx) {
     try {
       const { subscriptionId } = ctx.request.body;
