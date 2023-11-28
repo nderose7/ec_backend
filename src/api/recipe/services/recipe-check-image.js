@@ -1,39 +1,47 @@
+console.log("Loading OpenAI...")
 const OpenAI = require("openai");
+console.log("Loading path...")
 const path = require('path');
+console.log("Loading fs...")
 const fs = require('fs');
+console.log("Loading sharp...")
 const sharp = require('sharp');
+console.log("Loading client...")
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-const downloadImage = require('../utils/imageDownloader'); // Ensure this path is correct
+console.log("Loading downloadImage...")
+const downloadImage = require('../../../utils/imageDownloader'); // Ensure this path is correct
 
 
 async function checkAndGenerateImages() {
-  console.log("Checking recipes for images...")
-  try {
-    const recipes = await strapi.entityService.findMany('api::recipe.recipe', {
-      populate: "image",
-    });
-    //console.log("Recipes: ", recipes)
-    for (const recipe of recipes) {
-      if (!recipe.image) {
-        //console.log("Recipe: ", recipe)
-        
-        console.log("Recipe w/out image found...")
+  console.log("Checking recipes for images...");
+  
+  const recipes = await strapi.entityService.findMany('api::recipe.recipe', {
+    populate: "image",
+  });
+
+  for (const recipe of recipes) {
+    if (!recipe.image) {
+      console.log("Recipe w/out image found...");
+      try {
         const recipeName = `Image of ${recipe.recipe_name}`;
         const generatedImage = await generateImageWithDALLE(recipeName, recipe.uid);
 
         if (generatedImage) {
-          const updatedRecipe = await strapi.entityService.update('api::recipe.recipe', recipe.id, {
+          await strapi.entityService.update('api::recipe.recipe', recipe.id, {
             data: {
               image: generatedImage.id,  // Associate the image ID with the recipe
             },
           });
         }
+      } catch (error) {
+        console.error(`Error processing recipe ${recipe.id}:`, error);
+        // Optionally, log the recipe details for further investigation
+        // console.log('Failed recipe details:', recipe);
       }
     }
-  } catch (error) {
-    console.error('Error in checkAndGenerateImages:', error);
   }
 }
+
 
 async function generateImageWithDALLE(recipeName, recipeUID) {
   const prompt_for_image = `Create a highly detailed and realistic image of ${recipeName}. The image should vividly depict the dish's colors, textures, and key ingredients. Include visual elements like garnishes, the type of plate or bowl it's served in, and any side items or accompaniments that are typically served with it. The goal is to make the image as appetizing and true-to-life as possible, capturing the essence of the dish's flavors and presentation.`
@@ -91,6 +99,16 @@ async function generateImageWithDALLE(recipeName, recipeUID) {
   return null;
 }
 
+/*
+(async () => {
+  try {
+    await checkAndGenerateImages();
+  } catch (error) {
+    console.error('Error running script:', error);
+  }
+})();*/
+
 module.exports = {
   checkAndGenerateImages,
 };
+
