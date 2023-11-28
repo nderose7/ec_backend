@@ -425,9 +425,9 @@ module.exports = {
                 from: 'Nick at EatClassy <nick@eatclassy.com>',
                 to: subscriptionCreated.metadata.userEmail, // replace with user's email
                 subject: 'EatClassy Membership Activated!',
-                text: `Congratulations ${userFullName}! Your new EatClassy membership has been activated. You can now create more recipes and save recipes to your account. To manage your membership, use your account billing page at https://www.eatclassy.com/settings/billing`,
+                text: `Congratulations ${userFullName || subscriptionCreated.metadata.userEmail}! Your new EatClassy membership has been activated. You can now create more recipes and save recipes to your account. To manage your membership, use your account billing page at https://www.eatclassy.com/settings/billing`,
                 html: `<div><img src="https://eatclassy.nyc3.digitaloceanspaces.com/ec-logo-green.png" alt="EatClassy" width="133" height="35" />
-              </div><br /><p style="font-family: Arial, sans-serif;">Congratulations ${userFullName}! Your new EatClassy membership has been activated. You can now create more recipes and save recipes to your account.</p><p style="font-family: Arial, sans-serif;">To manage your membership, use your account billing page at <a href="https://www.eatclassy.com/settings/billing">https://www.eatclassy.com/settings/billing</a>.</p> <p>- Nick at EatClassy</p>`,
+              </div><br /><p style="font-family: Arial, sans-serif;">Congratulations ${userFullName || subscriptionCreated.metadata.userEmail}! Your new EatClassy membership has been activated. You can now create more recipes and save recipes to your account.</p><p style="font-family: Arial, sans-serif;">To manage your membership, use your account billing page at <a href="https://www.eatclassy.com/settings/billing">https://www.eatclassy.com/settings/billing</a>.</p> <p>- Nick at EatClassy</p>`,
               });
 
             } catch (err) {
