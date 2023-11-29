@@ -74,13 +74,15 @@ async function generateImageWithDALLE(recipeName, recipeUID) {
         });
 
       // Upload the file to DigitalOcean Spaces
-      const stream = fs.createReadStream(finalFilePath);
+      //const stream = fs.createReadStream(finalFilePath);
       const fileData = {
-        path: stream, // The file stream
+        path: finalFilePath, // The file path
         name: finalFileName,
         type: 'image/jpeg',
         size: fs.statSync(finalFilePath).size,
       };
+
+
 
       const uploadedFile = await strapi.plugins.upload.services.upload.upload({
         data: {}, // Any additional data you want to store
