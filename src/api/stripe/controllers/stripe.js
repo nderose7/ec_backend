@@ -829,10 +829,10 @@ module.exports = {
 
       // If the user has a Stripe customer ID, cancel their Stripe subscriptions
       if (user.stripeCustomerId) {
-        console.log("Stripe customer ID found...", user.userData.stripeCustomerId);
+        console.log("Stripe customer ID found...", user.stripeCustomerId);
         try {
           const subscriptions = await stripe.subscriptions.list({
-            customer: user.userData.stripeCustomerId,
+            customer: user.stripeCustomerId,
           });
           
           for (const subscription of subscriptions.data) {
