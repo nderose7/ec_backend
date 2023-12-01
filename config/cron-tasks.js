@@ -1,5 +1,5 @@
 module.exports = {
-  '0 * * * *': async () => {  // This will run every hour
+  '*/5 * * * *': async () => {
       console.log("Attempting cron...");
       console.log("Available services:", Object.keys(strapi.services));
 
