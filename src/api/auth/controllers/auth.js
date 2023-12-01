@@ -29,7 +29,7 @@ module.exports = {
       });
       try {
         await strapi.plugins['email'].services.email.send({
-          from: 'Nick at EatClassy.com <nick@eatclassy.com>',
+          from: 'Nick at EatClassy <nick@eatclassy.com>',
           to: email, // replace with user's email
           subject: 'Welcome to EatClassy!',
           text: 'Welcome! Your EatClassy account has been created. You can now save recipes and we hooked you up with 25 free credits. Thanks for joining! - Nick at EatClassy',
