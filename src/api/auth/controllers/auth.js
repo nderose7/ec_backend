@@ -32,8 +32,8 @@ module.exports = {
           from: 'Nick at EatClassy.com <nick@eatclassy.com>',
           to: email, // replace with user's email
           subject: 'Welcome to EatClassy!',
-          text: 'Welcome! Your EatClassy account has been created. You can now save recipes and we hooked you up with 25 free credits. Thanks for joining! - Nick DeRose',
-          html: '<p style="font-family: Arial, sans-serif;">Welcome! Your EatClassy account has been created. You can now save recipes and we hooked you up with 25 free credits.</p> <p style="font-family: Arial, sans-serif;">Thanks for joining!</p> <p style="font-family: Arial, sans-serif;">- Nick DeRose </p>',
+          text: 'Welcome! Your EatClassy account has been created. You can now save recipes and we hooked you up with 25 free credits. Thanks for joining! - Nick at EatClassy',
+          html: '<p style="font-family: Arial, sans-serif;">Welcome! Your EatClassy account has been created. You can now save recipes and we hooked you up with 25 free credits.</p> <p style="font-family: Arial, sans-serif;">Thanks for joining!</p> <p style="font-family: Arial, sans-serif;">- Nick at EatClassy </p>',
         });
       } catch (err) {
         console.error('Error sending email to new user:', err);
